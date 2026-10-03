@@ -80,6 +80,14 @@
 
 > 首版只绑 `127.0.0.1`；外网暴露由部署层（网关）承担。控制面不做认证（认证在分步 03 + 网关）。
 
+## 持久化定义契约（纯 JSON）
+
+- **持久化定义 = 纯 JSON**。`POST /meta/defs` 与 `POST /meta/workflowDefs` 的 `defn` **禁止内嵌函数值**
+  （如计算列 `computes.<k>.fn` / `asyncFn`）——含函数值的 defn 由宿主 `persistDef`/`persist_def` 显式拒绝，
+  控制面映射为 **400 `BAD_REQUEST`**（message 含 `不可持久化`，原样透传）。
+- 需要计算列/回调的定义，**定义内只写 `fnRef` 字符串**，回调实现由接入方在宿主 `register` 时注入
+  （`core.setFn(fnRef, impl)`）——这是「定义即数据」与「回调不可跨进程序列化」的边界（缺陷台账 D17）。
+
 ## 发布闭环（publish → reload → 协议面可见）
 
 `persistDef`（及 `persistWorkflowDef`）只把定义写入内建表 `__schemaDef` / `__workflowDef`，**不注册**（注册是协议面注册表的事）。
