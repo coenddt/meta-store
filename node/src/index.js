@@ -61,6 +61,25 @@ function mapError(err) {
   return { status: 500, code, message };
 }
 
+/**
+ * 发布后触发协议重装配钩子（04 §4.2）。
+ * - 未配置 META_RELOAD_HOOK：publish 仍成功，但以告警留痕（新定义对协议面不可见，禁静默）；
+ * - 配置了但返回非 2xx：显式抛 `ERR_RELOAD_FAILED`（不吞、不重试）。
+ */
+async function afterPublish(cfg) {
+  if (!cfg.reloadHook) {
+    // eslint-disable-next-line no-console
+    console.warn('meta-store: 未配置 META_RELOAD_HOOK，新定义对协议面不可见（需手动重装配）');
+    return;
+  }
+  const r = await fetch(cfg.reloadHook, { method: 'POST' });
+  if (!r.ok) {
+    const err = new Error(`ERR_RELOAD_FAILED: ${r.status}`);
+    err.code = 'ERR_RELOAD_FAILED';
+    throw err;
+  }
+}
+
 /** 端点表：method + 路径正则（捕获组为路径参数）→ 处理函数 */
 function buildRoutes(cfg) {
   return [
@@ -97,6 +116,7 @@ function buildRoutes(cfg) {
           env: cfg.env,
           actor: body.actor,
         });
+        await afterPublish(cfg);
         return { status: 200, data: row };
       },
     },
@@ -117,6 +137,7 @@ function buildRoutes(cfg) {
           name: decodeURIComponent(params[0]),
           version,
         });
+        await afterPublish(cfg);
         return { status: 200, data: row };
       },
     },
