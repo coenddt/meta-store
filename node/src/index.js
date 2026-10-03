@@ -233,6 +233,7 @@ async function main() {
   console.log(`meta-store listening on http://127.0.0.1:${port} (tenant=${cfg.tenant} env=${cfg.env})`);
   const shutdown = async () => {
     await new Promise((r) => server.close(r));
+    await store.flushFeedback();   // 退出前收口在途反馈落库（A3残留 / D8）
     await client.close();
   };
   process.on('SIGINT', shutdown);
