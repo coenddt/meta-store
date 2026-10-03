@@ -141,6 +141,52 @@ function buildRoutes(cfg) {
         return { status: 200, data: row };
       },
     },
+    {
+      method: 'GET',
+      pattern: /^\/meta\/workflowDefs$/,
+      handler: async ({ query }) => {
+        const name = query.get('name');
+        const rows = await store.listWorkflowDefs({
+          tenant: cfg.tenant, env: cfg.env, name: name === null ? undefined : name,
+        });
+        return { status: 200, data: rows };
+      },
+    },
+    {
+      method: 'POST',
+      pattern: /^\/meta\/workflowDefs$/,
+      handler: async ({ body }) => {
+        if (!body || typeof body !== 'object' || Array.isArray(body)) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: '请求体须为 JSON 对象 {defn, actor?}' } };
+        }
+        if (!body.defn || typeof body.defn !== 'object' || typeof body.defn.name !== 'string' || !body.defn.name) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: '缺 defn 或 defn.name（非空字符串）' } };
+        }
+        const row = await store.persistWorkflowDef(body.defn, {
+          tenant: cfg.tenant, env: cfg.env, actor: body.actor,
+        });
+        await afterPublish(cfg);
+        return { status: 200, data: row };
+      },
+    },
+    {
+      method: 'POST',
+      pattern: /^\/meta\/workflowDefs\/([^/]+)\/rollback$/,
+      handler: async ({ params, body }) => {
+        if (!body || typeof body !== 'object' || Array.isArray(body) || body.version == null) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: '缺 version' } };
+        }
+        const version = Number(body.version);
+        if (!Number.isInteger(version)) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: `version 须为整数，收到 ${body.version}` } };
+        }
+        const row = await store.rollbackWorkflowTo({
+          tenant: cfg.tenant, env: cfg.env, name: decodeURIComponent(params[0]), version,
+        });
+        await afterPublish(cfg);
+        return { status: 200, data: row };
+      },
+    },
   ];
 }
 

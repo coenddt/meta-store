@@ -84,10 +84,11 @@ test('meta-store 定义治理闭环：save → list → rollback', async (t) => 
     assert.equal(l.status, 200);
     assert.deepEqual((await l.json()).data.map((r) => r.version), [2, 1]);
 
-    // rollback → v1 生效
+    // rollback → v1 生效（追加式：以 v1 defn 落新版本行，返回该行 version=3）
     const rb = await post('/meta/defs/SmokeItem/rollback', { version: 1 });
     assert.equal(rb.status, 200);
-    assert.equal(rb.json.data.version, 1);
+    assert.equal(rb.json.data.version, 3);
+    assert.deepEqual(rb.json.data.defn.fields, v1.fields);
     assert.deepEqual(store.get('SmokeItem').fields, v1.fields);
 
     // 版本不存在 → 404 NOT_FOUND

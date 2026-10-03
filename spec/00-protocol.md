@@ -42,6 +42,8 @@
 
 `defs` 列表按 `version desc`；`name` 缺省列该 `(tenant, env)` 全部定义。
 
+`rollback` 返回的 `row` 为**回滚后新版本行**：`version` 为追加后的新号（回滚到「当前已生效内容」时因同名同形幂等返回现最新行、不新增版本）；目标历史行不被改写（append-only）。
+
 ## 响应壳（对齐 `store-api/spec/03-errors.md`）
 
 ```jsonc
@@ -83,4 +85,7 @@
 - 未配置 `META_RELOAD_HOOK`：publish 仍成功，但新定义对协议面不可见 → 告警留痕（不静默）。
 - 版本并发：行自然键 `_id=(tenant,env,name,version)` 在存储层保证 version 唯一，
   同版本并发写后到者显式 `409 CONFLICT`。
-- 已知残留：`rollback` 只重注册历史行、不落新行，跨进程（网关侧）尚不可见。
+- **回滚闭环（同一条桥）**：`rollbackTo` 为**追加式**——以历史行 `defn` 走 `persistDef` 语义落一条
+  **新版本行**（同名同形幂等 → 返回当前最新行），历史行不改写（append-only）。`loadDefs` 取
+  「各 name 最新 active」故必然返回该行，网关 `restoreDefs → loadDefs` hydrate 即按回滚后的
+  `defn` 装配——**回滚经一次 reload 对协议面（网关进程）可见**。
