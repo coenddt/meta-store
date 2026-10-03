@@ -48,6 +48,13 @@ test('控制面 workflowDefs 闭环：save → list → rollback', async (t) => 
   await init(db);
   store.ensureBuiltins();
 
+  // B1 前置：rollback 会触发 workflow.register 的注册期可规划性校验，
+  // WfSmoke 的 gql `Item(){ _id }`（及 v2 的 `Item(){ _id title }`）要求 Item 已注册。
+  store.register({
+    name: 'Item', collection: 'items', idPrefix: 'it',
+    fields: { _id: { type: 'string' }, title: { type: 'string' } },
+  });
+
   const server = createServer(CFG);
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}`;
