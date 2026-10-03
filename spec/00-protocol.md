@@ -6,14 +6,15 @@
 
 ## 定位
 
-`meta-store` 以 HTTP API 承载「定义侧治理」动作（发布 / 列表 / 回滚），把 schema 定义
-持久化到宿主 `nodejs-store` 的内建定义表 `__schemaDef`（分步 01）。**零业务语义发明**：
-端点只做编排与转发，定义判决（版本比对、落库、注册）全在 store 面。
+`meta-store` 以 HTTP API 承载「定义侧治理」动作（发布 / 列表 / 回滚），把 **schema 定义**与
+**workflow 定义**持久化到宿主 `nodejs-store` 的内建定义表 `__schemaDef` / `__workflowDef`（分步 01）。
+**零业务语义发明**：端点只做编排与转发，定义判决（版本比对、落库、注册）全在 store 面。
 
 三条铁律：
 
 - **单 ns 实例**：一个进程服务一个 `(tenant, env)`（环境变量注入）；多 ns = 多进程（进程级隔离）。
-- **一切经 store 面**：不直接读写 DB 表；只调 `store.persistDef / listDefs / loadDefs / rollbackTo`。
+- **一切经 store 面**：不直接读写 DB 表；只调 `store.persistDef / listDefs / loadDefs / rollbackTo`
+  （workflow 定义对应 `store.persistWorkflowDef / listWorkflowDefs / loadWorkflowDefs / rollbackWorkflowTo`）。
 - **错误不吞**：全部异常显式上浮并按本文件映射；成功响应不含任何错误语义字段。
 
 ## 环境变量（fail-fast）
@@ -37,8 +38,12 @@
 | GET | `/meta/defs?name=<n>` | 无 body | `{data:[row,...]}` | 400 |
 | POST | `/meta/defs` | `{defn, actor?}` | `{data:row}` | 400 / 409 / 403 |
 | POST | `/meta/defs/:name/rollback` | `{version, actor?}` | `{data:row}` | 400 / 404 |
+| GET | `/meta/workflowDefs?name=<n>` | 无 body | `{data:[row,...]}` | 400 |
+| POST | `/meta/workflowDefs` | `{defn, actor?}` | `{data:row}` | 400 / 409 / 403 |
+| POST | `/meta/workflowDefs/:name/rollback` | `{version, actor?}` | `{data:row}` | 400 / 404 |
 
 `row` 形状 = `__schemaDef` 行：`{_id, tenant, env, name, version, defn, status, createdBy, createdAt?, updatedAt?}`。
+`workflowDefs` 的 `row` 形状与语义**完全一致**，仅落表不同（`__workflowDef`）；`defn` 为 workflow 定义（`{name, steps, read?/write?/run?}`，纯 JSON）。
 
 `defs` 列表按 `version desc`；`name` 缺省列该 `(tenant, env)` 全部定义。
 
@@ -77,10 +82,10 @@
 
 ## 发布闭环（publish → reload → 协议面可见）
 
-`persistDef` 只把定义写入内建表 `__schemaDef`，**不注册**（注册是协议面注册表的事）。
+`persistDef`（及 `persistWorkflowDef`）只把定义写入内建表 `__schemaDef` / `__workflowDef`，**不注册**（注册是协议面注册表的事）。
 闭环由 `META_RELOAD_HOOK` 指向网关 `POST /-/reload` 完成：网关须配置
-`reload: { tenant, env }`，在重装配前调 `store.restoreDefs({tenant, env})`
-（`loadDefs → 逐条 register`）从库重建注册表（详见 `store-gateway/spec/00-protocol.md`）。
+`reload: { tenant, env }`，在重装配前调 `store.restoreDefs({tenant, env})`（按 kind 从
+`__schemaDef` / `__workflowDef` 重建 schema 与 workflow 两类注册表；详见 `store-gateway/spec/00-protocol.md`）。
 
 - 未配置 `META_RELOAD_HOOK`：publish 仍成功，但新定义对协议面不可见 → 告警留痕（不静默）。
 - 版本并发：行自然键 `_id=(tenant,env,name,version)` 在存储层保证 version 唯一，
