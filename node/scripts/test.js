@@ -13,7 +13,7 @@ const path = require('node:path');
 
 const root = path.join(__dirname, '..');
 const env = { ...process.env }; // 透传外部环境；不再注入 LOCAL_CORE=1
-const result = spawnSync(process.execPath, ['--test', 'test/**/*.js'], {
+const result = spawnSync(process.execPath, ['--test', 'test'], {
   cwd: root,
   stdio: 'inherit',
   env,
