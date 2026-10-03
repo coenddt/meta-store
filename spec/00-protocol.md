@@ -72,3 +72,15 @@
 3. `main()`：`bootstrap` + `listen(cfg.port, '127.0.0.1')`。
 
 > 首版只绑 `127.0.0.1`；外网暴露由部署层（网关）承担。控制面不做认证（认证在分步 03 + 网关）。
+
+## 发布闭环（publish → reload → 协议面可见）
+
+`persistDef` 只把定义写入内建表 `__schemaDef`，**不注册**（注册是协议面注册表的事）。
+闭环由 `META_RELOAD_HOOK` 指向网关 `POST /-/reload` 完成：网关须配置
+`reload: { tenant, env }`，在重装配前调 `store.restoreDefs({tenant, env})`
+（`loadDefs → 逐条 register`）从库重建注册表（详见 `store-gateway/spec/00-protocol.md`）。
+
+- 未配置 `META_RELOAD_HOOK`：publish 仍成功，但新定义对协议面不可见 → 告警留痕（不静默）。
+- 版本并发：行自然键 `_id=(tenant,env,name,version)` 在存储层保证 version 唯一，
+  同版本并发写后到者显式 `409 CONFLICT`。
+- 已知残留：`rollback` 只重注册历史行、不落新行，跨进程（网关侧）尚不可见。
