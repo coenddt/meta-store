@@ -24,6 +24,6 @@
   },
   "dependencies": {
     "mongodb": "^6.21.0",
-    "nodejs-store": "file:../../nodejs-store"
+    "nodejs-store": "^3.3.0"
   }
 }
