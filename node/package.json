@@ -1,0 +1,29 @@
+{
+  "name": "meta-store-node",
+  "version": "0.1.0",
+  "description": "meta-store definition control plane (single-namespace) — HTTP governance API (publish/list/rollback) over nodejs-store metadef",
+  "main": "src/index.js",
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test"
+  },
+  "keywords": [
+    "nodejs-store",
+    "meta-store",
+    "definition",
+    "control-plane",
+    "schema",
+    "versioning"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "mongodb": "^6.21.0",
+    "nodejs-store": "file:../../nodejs-store"
+  }
+}

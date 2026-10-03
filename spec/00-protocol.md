@@ -1,0 +1,74 @@
+# 00 — meta-store 定义控制面：协议
+
+> 唯一事实源：控制面的一切端点、请求/响应字段、错误映射一律回指本文件，不得另立口径。
+> 日期：2026-10-03
+> 上游：`doc/execution/2026/10/*meta-store定义控制面*`（总纲 + 分步 01/02）；响应壳对齐 `store-api/spec/03-errors.md`。
+
+## 定位
+
+`meta-store` 以 HTTP API 承载「定义侧治理」动作（发布 / 列表 / 回滚），把 schema 定义
+持久化到宿主 `nodejs-store` 的内建定义表 `__schemaDef`（分步 01）。**零业务语义发明**：
+端点只做编排与转发，定义判决（版本比对、落库、注册）全在 store 面。
+
+三条铁律：
+
+- **单 ns 实例**：一个进程服务一个 `(tenant, env)`（环境变量注入）；多 ns = 多进程（进程级隔离）。
+- **一切经 store 面**：不直接读写 DB 表；只调 `store.persistDef / listDefs / loadDefs / rollbackTo`。
+- **错误不吞**：全部异常显式上浮并按本文件映射；成功响应不含任何错误语义字段。
+
+## 环境变量（fail-fast）
+
+| 变量 | 必填 | 缺省 | 说明 |
+|---|---|---|---|
+| `META_TENANT` | 是 | — | 租户标识（本实例服务的 namespace 维度之一） |
+| `META_ENV` | 是 | — | 环境标识（dev/staging/prod） |
+| `MONGO_URI` | 是 | — | store 数据源（首版 Mongo） |
+| `META_DB` | 否 | `meta_store` | store 定位的数据库名 |
+| `META_PORT` | 否 | `8600` | 监听端口 |
+| `META_RELOAD_HOOK` | 否 | — | 发布成功后触发的协议重装配钩子（分步 04） |
+
+- 缺失任一必填 → 构造期抛 `ERR_META_CONFIG`（**禁默认值兜底**）。
+
+## 端点契约
+
+| 方法 | 路径 | 请求 | 成功响应（200） | 失败 |
+|---|---|---|---|---|
+| GET | `/meta/health` | — | `{data:{ok:true,tenant,env}}` | — |
+| GET | `/meta/defs?name=<n>` | 无 body | `{data:[row,...]}` | 400 |
+| POST | `/meta/defs` | `{defn, actor?}` | `{data:row}` | 400 / 409 / 403 |
+| POST | `/meta/defs/:name/rollback` | `{version, actor?}` | `{data:row}` | 400 / 404 |
+
+`row` 形状 = `__schemaDef` 行：`{_id, tenant, env, name, version, defn, status, createdBy, createdAt?, updatedAt?}`。
+
+`defs` 列表按 `version desc`；`name` 缺省列该 `(tenant, env)` 全部定义。
+
+## 响应壳（对齐 `store-api/spec/03-errors.md`）
+
+```jsonc
+// 成功（2xx）
+{ "data": <payload> }
+// 失败（4xx/5xx）
+{ "error": { "code": "BAD_REQUEST" | "NOT_FOUND" | "CONFLICT" | "PERMISSION", "message": "<原始信息，原样透传>" } }
+```
+
+- 成功响应**不得**含 `error` 字段或任何错误语义文案；
+- `message` 取错误对象 `message` 原样，不改写、不圆场（取不到则显式 `null`，保留 `code`）。
+
+## 错误 → 状态码映射
+
+| 场景 | 状态码 | code |
+|---|---|---|
+| `POST /meta/defs` 缺 `defn` 或 `defn.name` | 400 | `BAD_REQUEST` |
+| `POST .../rollback` 缺 `version` | 400 | `BAD_REQUEST` |
+| 回滚目标版本不存在 | 404 | `NOT_FOUND` |
+| 版本唯一键冲突（并发写同版本） | 409 | `CONFLICT` |
+| 定义层权限拒绝（message 前缀 `ERR_PERMISSION:`；分步 03） | 403 | `PERMISSION` |
+| 其余（数据库 / 连接 / 方言等） | 500 | 错误对象 `code`/`name` |
+
+## 装配与生命周期
+
+1. `bootstrap(cfg)`：`MongoClient.connect` → `init(client.db(cfg.dbName))` → `store.ensureBuiltins()`；
+2. `createServer(cfg)`：基于 `node:http` 组装路由（返回未监听的 `http.Server`）；
+3. `main()`：`bootstrap` + `listen(cfg.port, '127.0.0.1')`。
+
+> 首版只绑 `127.0.0.1`；外网暴露由部署层（网关）承担。控制面不做认证（认证在分步 03 + 网关）。
