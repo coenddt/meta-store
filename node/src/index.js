@@ -165,12 +165,15 @@ function createServer(cfg) {
   });
 }
 
-/** 连接数据源 + 自举内建定义表（返回待关闭的 MongoClient） */
+/** 连接数据源 + 自举内建定义表 + 接线反馈落库（返回待关闭的 MongoClient） */
 async function bootstrap(cfg) {
   const client = new MongoClient(cfg.mongoUri);
   await client.connect();
   await init(client.db(cfg.dbName));
   store.ensureBuiltins();
+  // A6：降级/拦截事件落内建 __feedback（带本实例 ns 标签），不再只落 stderr
+  store.setFeedbackMeta({ tenant: cfg.tenant, env: cfg.env });
+  store.enableFeedbackTable();
   return client;
 }
 
