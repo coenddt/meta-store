@@ -1,7 +1,7 @@
 'use strict';
 
 /**
- * meta-store — 定义控制面服务（单 namespace 实例）
+ * meta-store — 定义控制面服务（单 `(tenant, env)` 实例）
  *
  * 语义依据：../spec/00-protocol.md（端点 / 响应壳 / 错误映射唯一事实源）。
  * 本层零业务语义：只编排转发 `nodejs-store` 的 metadef 面（store.persistDef /
@@ -217,7 +217,7 @@ async function bootstrap(cfg) {
   await client.connect();
   await init(client.db(cfg.dbName));
   store.ensureBuiltins();
-  // A6：降级/拦截事件落内建 __feedback（带本实例 ns 标签），不再只落 stderr
+  // A6：降级/拦截事件落内建 __feedback（带本实例 (tenant, env) 标签），不再只落 stderr
   store.setFeedbackMeta({ tenant: cfg.tenant, env: cfg.env });
   store.enableFeedbackTable();
   return client;

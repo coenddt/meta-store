@@ -10,9 +10,13 @@
 **workflow 定义**持久化到宿主 `nodejs-store` 的内建定义表 `__schemaDef` / `__workflowDef`（分步 01）。
 **零业务语义发明**：端点只做编排与转发，定义判决（版本比对、落库、注册）全在 store 面。
 
+**维度正交（不合并）**：`(tenant, env)` 是**定义仓库**的隔离维度；`source` / `database` / `schema`
+是**数据仓库**的物理定位维度；二者**正交、不合并**。租户级数据隔离走**运行期 `routeOverride` / 落点集合**，
+**不动控制面**。
+
 三条铁律：
 
-- **单 ns 实例**：一个进程服务一个 `(tenant, env)`（环境变量注入）；多 ns = 多进程（进程级隔离）。
+- **单 `(tenant, env)` 实例**：一个进程服务一个 `(tenant, env)` 隔离维度（环境变量注入）；多个 `(tenant, env)` = 多进程（进程级隔离）。
 - **一切经 store 面**：不直接读写 DB 表；只调 `store.persistDef / listDefs / loadDefs / rollbackTo`
   （workflow 定义对应 `store.persistWorkflowDef / listWorkflowDefs / loadWorkflowDefs / rollbackWorkflowTo`）。
 - **错误不吞**：全部异常显式上浮并按本文件映射；成功响应不含任何错误语义字段。
@@ -21,7 +25,7 @@
 
 | 变量 | 必填 | 缺省 | 说明 |
 |---|---|---|---|
-| `META_TENANT` | 是 | — | 租户标识（本实例服务的 namespace 维度之一） |
+| `META_TENANT` | 是 | — | 租户标识（本实例服务的 `(tenant, env)` 隔离维度之一） |
 | `META_ENV` | 是 | — | 环境标识（dev/staging/prod） |
 | `MONGO_URI` | 是 | — | store 数据源（首版 Mongo） |
 | `META_DB` | 否 | `meta_store` | store 定位的数据库名 |

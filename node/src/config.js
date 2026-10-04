@@ -4,7 +4,7 @@
  * meta-store 配置解析（环境变量 → 配置对象；fail-fast，禁默认值兜底）。
  *
  * 语义依据：../spec/00-protocol.md「环境变量」。
- * 一个进程只服务一个 `(tenant, env)`；多 ns 由部署层起多实例承担。
+ * 一个进程只服务一个 `(tenant, env)` 隔离维度；多个 `(tenant, env)` 由部署层起多实例承担。
  */
 
 /** 读取并校验环境变量 → 配置对象；缺失必填 → 抛 `ERR_META_CONFIG` */

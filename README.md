@@ -6,8 +6,8 @@ schema 定义的 **发布 / 列表 / 回滚**，把定义持久化到 `nodejs-st
 
 ## 形态
 
-- **单 namespace 实例**：一个进程只服务一个 `(tenant, env)`；`tenant`/`env` 由环境变量注入。
-  多 namespace 由部署层**起多实例**承担（进程级隔离；禁同进程多 Registry）。
+- **单 `(tenant, env)` 实例**：一个进程只服务一个 `(tenant, env)` 隔离维度；`tenant`/`env` 由环境变量注入。
+  多个 `(tenant, env)` 由部署层**起多实例**承担（进程级隔离；禁同进程多 Registry）。
 - **零 Web 框架依赖**：HTTP 服务用 `node:http` 实现（`fastify` 等留待后续评审）。
 - **一切经 store 面**：控制面不直接读写 DB 表，只编排转发 `nodejs-store` 的
   `store.persistDef / listDefs / loadDefs / rollbackTo`。
