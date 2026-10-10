@@ -1,8 +1,8 @@
 # meta-store — 定义控制面
 
 `meta-store` 是 common-store「一切皆数据」**定义侧治理**的控制面服务：以 HTTP API 承载
-schema 定义的 **发布 / 列表 / 回滚**，把定义持久化到 `nodejs-store` 的内建定义表
-`__schemaDef`（分步 01 提供）。
+schema 定义与 workflow 定义的 **发布 / 列表 / 回滚**，把定义持久化到 `nodejs-store` 的内建定义表
+`__schemaDef` / `__workflowDef`（分步 01 提供）。
 
 ## 形态
 
@@ -10,7 +10,8 @@ schema 定义的 **发布 / 列表 / 回滚**，把定义持久化到 `nodejs-st
   多个 `(tenant, env)` 由部署层**起多实例**承担（进程级隔离；禁同进程多 Registry）。
 - **零 Web 框架依赖**：HTTP 服务用 `node:http` 实现（`fastify` 等留待后续评审）。
 - **一切经 store 面**：控制面不直接读写 DB 表，只编排转发 `nodejs-store` 的
-  `store.persistDef / listDefs / loadDefs / rollbackTo`。
+  `store.persistDef / listDefs / loadDefs / rollbackTo`（对应 workflow 定义的门面为
+  `store.persistWorkflowDef / listWorkflowDefs / loadWorkflowDefs / rollbackWorkflowTo`）。
 - **错误不吞**：定义层权限拒绝（`ERR_PERMISSION:`）、版本唯一键冲突等**原样上浮**并按
   `spec/00-protocol.md` 映射为状态码（遵 `no-error-masking`）。
 
@@ -23,8 +24,12 @@ meta-store/
 └── node/                    # Node 控制面实现
     ├── package.json
     ├── src/config.js        # 环境变量解析（fail-fast）
-    ├── src/index.js         # node:http 服务 + 4 端点
-    └── test/smoke.test.js   # save → list → rollback 闭环冒烟
+    ├── src/index.js         # node:http 服务 + 7 端点（schema 定义 3 + workflow 定义 3 + health）
+    ├── test/smoke.test.js           # save → list → rollback 闭环冒烟
+    ├── test/error-matrix.test.js    # 错误 → 状态码映射矩阵
+    ├── test/workflow-defs.test.js   # workflow 定义 publish / list / rollback
+    ├── test/hot-reload.test.js      # META_RELOAD_HOOK 发布后热重装配
+    └── scripts/test.js              # 测试启动器（node:test，对齐 nodejs-store/scripts/test.js）
 ```
 
 ## 运行
