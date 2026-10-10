@@ -1,6 +1,6 @@
 {
   "name": "meta-store-node",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "meta-store definition control plane (single (tenant, env) instance) — HTTP governance API (publish/list/rollback) over nodejs-store metadef",
   "main": "src/index.js",
   "files": [
