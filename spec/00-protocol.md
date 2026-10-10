@@ -59,7 +59,7 @@
 // 成功（2xx）
 { "data": <payload> }
 // 失败（4xx/5xx）
-{ "error": { "code": "BAD_REQUEST" | "NOT_FOUND" | "CONFLICT" | "PERMISSION", "message": "<原始信息，原样透传>" } }
+{ "error": { "code": "BAD_REQUEST" | "NOT_FOUND" | "CONFLICT" | "PERMISSION" | "NO_CONTEXT", "message": "<原始信息，原样透传>" } }
 ```
 
 - 成功响应**不得**含 `error` 字段或任何错误语义文案；
@@ -74,6 +74,7 @@
 | 回滚目标版本不存在 | 404 | `NOT_FOUND` |
 | 版本唯一键冲突（并发写同版本） | 409 | `CONFLICT` |
 | 定义层权限拒绝（message 前缀 `ERR_PERMISSION:`；分步 03） | 403 | `PERMISSION` |
+| 定义层上下文缺失（`requireContext` 开启且 ctx 缺失；host `NoContextError` machine code `no_context` / 前缀 `ERR_NO_CONTEXT:`） | 403 | `NO_CONTEXT` |
 | 其余（数据库 / 连接 / 方言等） | 500 | 错误对象 `code`/`name` |
 
 ## 装配与生命周期

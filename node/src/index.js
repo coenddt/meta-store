@@ -47,6 +47,11 @@ function mapError(err) {
   if (message && message.startsWith('ERR_PERMISSION:')) {
     return { status: 403, code: 'PERMISSION', message };
   }
+  // 权限类同档：NoContext（requireContext 开启且 ctx 缺失）—— host 以 machine code
+  // `no_context` 承载（已剥前缀），字符串通道 host 保留 `ERR_NO_CONTEXT:` 前缀 ⇒ 403。
+  if ((err && err.code === 'no_context') || (message && message.startsWith('ERR_NO_CONTEXT:'))) {
+    return { status: 403, code: 'NO_CONTEXT', message };
+  }
   if (code === 11000 || code === 'DUPLICATE_KEY' || /duplicate key|UNIQUE constraint failed/i.test(message || '')) {
     return { status: 409, code: 'CONFLICT', message };
   }
