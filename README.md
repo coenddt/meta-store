@@ -113,7 +113,7 @@ META_TENANT=acme META_ENV=dev MONGO_URI=mongodb://127.0.0.1:27017 META_PORT=8600
 # => meta-store listening on http://127.0.0.1:8600 (tenant=acme env=dev)
 ```
 
-Three variables are required: `META_TENANT`, `META_ENV`, `MONGO_URI`. `META_DB` defaults to `meta_store`, `META_PORT` to `8600`. The npm package is `meta-store-node` (currently `0.2.4`); it has no `bin` field — the entry point is `src/index.js`.
+Three variables are required: `META_TENANT`, `META_ENV`, `MONGO_URI`. `META_DB` defaults to `meta_store`, `META_PORT` to `8600`. The npm package is `meta-store-node` (currently `0.2.5`); it has no `bin` field — the entry point is `src/index.js`.
 
 Publish a definition and inspect the response:
 

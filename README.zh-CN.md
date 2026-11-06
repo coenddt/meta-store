@@ -113,7 +113,7 @@ META_TENANT=acme META_ENV=dev MONGO_URI=mongodb://127.0.0.1:27017 META_PORT=8600
 # => meta-store listening on http://127.0.0.1:8600 (tenant=acme env=dev)
 ```
 
-三个必填变量是 `META_TENANT`、`META_ENV`、`MONGO_URI`；`META_DB` 缺省 `meta_store`，`META_PORT` 缺省 `8600`。npm 包名是 `meta-store-node`（当前 `0.2.4`），没有 `bin` 字段，入口是 `src/index.js`。
+三个必填变量是 `META_TENANT`、`META_ENV`、`MONGO_URI`；`META_DB` 缺省 `meta_store`，`META_PORT` 缺省 `8600`。npm 包名是 `meta-store-node`（当前 `0.2.5`），没有 `bin` 字段，入口是 `src/index.js`。
 
 发布一份定义并看返回值：
 
