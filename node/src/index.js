@@ -40,10 +40,23 @@ function readJsonBody(req) {
   });
 }
 
+/** defn 是否内嵌函数值（计算列 fn/asyncFn 等）：定义必须为可跨进程序列的纯 JSON */
+function containsFunction(value, seen = new Set()) {
+  if (typeof value === 'function') return true;
+  if (!value || typeof value !== 'object' || seen.has(value)) return false;
+  seen.add(value);
+  return Object.values(value).some((v) => containsFunction(v, seen));
+}
+
 /** 错误 → {status, code, message}（spec/00 映射表；message 原样透传，不圆场） */
 function mapError(err) {
   const message = err && err.message != null ? String(err.message) : null;
   const code = (err && (err.code || err.name)) || 'INTERNAL';
+  // 定义即数据：含函数值的 defn 不可持久化（spec/00）。宿主拒绝时文案含「不可持久化」，
+  // 控制面必须映射 400，禁止落 500 —— 否则调用方无法区分「输入非法」与「服务故障」。
+  if (message && message.includes('不可持久化')) {
+    return { status: 400, code: 'BAD_REQUEST', message };
+  }
   if (message && message.startsWith('ERR_PERMISSION:')) {
     return { status: 403, code: 'PERMISSION', message };
   }
@@ -116,6 +129,9 @@ function buildRoutes(cfg) {
         if (!body.defn || typeof body.defn !== 'object' || typeof body.defn.name !== 'string' || !body.defn.name) {
           return { status: 400, error: { code: 'BAD_REQUEST', message: '缺 defn 或 defn.name（非空字符串）' } };
         }
+        if (containsFunction(body.defn)) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: 'defn 含函数值，不可持久化（计算列/回调请写 fnRef 字符串，见 spec/00）' } };
+        }
         const row = await store.persistDef(body.defn, {
           tenant: cfg.tenant,
           env: cfg.env,
@@ -166,6 +182,9 @@ function buildRoutes(cfg) {
         }
         if (!body.defn || typeof body.defn !== 'object' || typeof body.defn.name !== 'string' || !body.defn.name) {
           return { status: 400, error: { code: 'BAD_REQUEST', message: '缺 defn 或 defn.name（非空字符串）' } };
+        }
+        if (containsFunction(body.defn)) {
+          return { status: 400, error: { code: 'BAD_REQUEST', message: 'defn 含函数值，不可持久化（计算列/回调请写 fnRef 字符串，见 spec/00）' } };
         }
         const row = await store.persistWorkflowDef(body.defn, {
           tenant: cfg.tenant, env: cfg.env, actor: body.actor,

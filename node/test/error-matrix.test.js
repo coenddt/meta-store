@@ -32,6 +32,14 @@ test('映射矩阵：Permission 档（前缀 ERR_PERMISSION:）→ 403/PERMISSIO
   assert.equal(r.code, 'PERMISSION');
 });
 
+test('映射矩阵：不可持久化 defn（宿主拒绝文案含「不可持久化」）→ 400/BAD_REQUEST（禁落 500）', () => {
+  const raw = 'defn 含函数值，不可持久化（computes.age.fn）';
+  const r = mapError(new Error(raw));
+  assert.equal(r.status, 400);
+  assert.equal(r.code, 'BAD_REQUEST');
+  assert.equal(r.message, raw);
+});
+
 test('映射矩阵：Other 档 → 500 透传原文（禁静默）', () => {
   const e = new Error('内部错误');
   e.code = 'INTERNAL';
